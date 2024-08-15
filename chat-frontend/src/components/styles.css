@@ -1,0 +1,25 @@
+.messages {
+  display: flex;
+  flex-direction: column;
+  overflow-y: scroll;
+  scrollbar-width: none;
+}
+.notification-badge {
+  position: relative;
+  display: inline-block;
+}
+
+.notification-count {
+  position: absolute;
+  top: -20px; /* Adjust the position based on your preference */
+  right: -34px; /* Adjust the position based on your preference */
+  background-color: red;
+  color: white;
+  border-radius: 50%;
+  padding: 4px 8px;
+  font-size: 10px;
+  font-weight: bold;
+  line-height: 1;
+  min-width: 10px;
+  text-align: center;
+}
