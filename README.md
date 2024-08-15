@@ -10,9 +10,9 @@ Stellar Talk is a unique chat application designed specifically for enthusiasts 
 
 **Database:** Mongo DB
 
-## Demo
+## Live URL
 
-[https://talk-a-tive.herokuapp.com/](https://talk-a-tive-7fgq.onrender.com)
+[https://stellar-talk.onrender.com](https://stellar-talk.onrender.com)
 
 ## Run Locally
 
