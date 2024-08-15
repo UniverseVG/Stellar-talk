@@ -5,8 +5,8 @@
   "main": "src/index.js",
   "type": "module",
   "scripts": {
-    "start": "nodemon chat-backend/src/index.js",
-    "dev": "node chat-backend/src/index.js",
+    "dev": "nodemon chat-backend/src/index.js",
+    "start": "node chat-backend/src/index.js",
     "build": "npm install --legacy-peer-deps && npm install --legacy-peer-deps --prefix chat-frontend --production=false && npm run build --prefix chat-frontend"
   },
   "author": "G M Varun",
