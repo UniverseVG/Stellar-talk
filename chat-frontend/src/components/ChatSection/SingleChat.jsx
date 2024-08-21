@@ -6,6 +6,7 @@ import {
   Input,
   Spinner,
   Text,
+  useColorMode,
   useToast,
 } from "@chakra-ui/react";
 import { ChatState } from "../../Context/ChatProvider";
@@ -14,19 +15,26 @@ import { getSender, getSenderFull } from "../../config/ChatLogic";
 import ProfileModal from "../User/ProfileModal";
 import UpdateGroupChatModal from "./UpdateGroupChatModal";
 import { useEffect, useState } from "react";
-import axios from "axios";
 import "../styles.css";
 import ScrollableChat from "./ScrollableChat";
 import io from "socket.io-client";
 import Lottie from "react-lottie";
 import typingAnimation from "../../animations/typing_json.json";
+import apiEndpoints from "../../api";
 
 const ENDPOINT = import.meta.env.VITE_SERVER_URL;
 var socket, selectedChatCompare;
 
 function SingleChat({ fetchAgain, setFetchAgain }) {
-  const { user, selectedChat, setSelectedChat, notification, setNotification } =
-    ChatState();
+  const {
+    user,
+    selectedChat,
+    setSelectedChat,
+    notification,
+    setNotification,
+    setActiveUsers,
+    activeUsers,
+  } = ChatState();
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(false);
   const [newMessage, setNewMessage] = useState("");
@@ -34,6 +42,7 @@ function SingleChat({ fetchAgain, setFetchAgain }) {
   const [typing, setTyping] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
   const toast = useToast();
+  const { colorMode } = useColorMode();
 
   const defaultOptions = {
     loop: true,
@@ -44,8 +53,27 @@ function SingleChat({ fetchAgain, setFetchAgain }) {
     },
   };
 
+  const readChatNotifications = async () => {
+    try {
+      const { data } = await apiEndpoints.readChatNotifications(
+        selectedChat._id
+      );
+      socket.emit("notification received", data);
+    } catch {
+      toast({
+        title: "Error Occurred!",
+        description: "Failed to Load the Messages",
+        status: "error",
+        duration: 5000,
+        isClosable: true,
+        position: "bottom",
+      });
+    }
+  };
+
   useEffect(() => {
     socket = io(ENDPOINT);
+    socket.emit("connection", user);
     socket.emit("setup", user);
     socket.on("connected", () => setSocketConnected(true));
     socket.on("typing", () => setIsTyping(true));
@@ -57,39 +85,61 @@ function SingleChat({ fetchAgain, setFetchAgain }) {
     selectedChatCompare = selectedChat;
   }, [selectedChat]);
 
+  const createNotification = (newMessageReceived) => {
+    apiEndpoints
+      .createNotification({
+        sender: newMessageReceived.sender._id,
+        chat: newMessageReceived.chat._id,
+        isGroupChat: newMessageReceived.chat.isGroupChat,
+        readBy: activeUsers,
+      })
+      .then(() => {
+        socket.emit("notification received", newMessageReceived);
+      })
+      .catch((error) => {
+        toast({
+          title: "Error Occurred!",
+          description: error.message || "Failed to Load the Notifications",
+          status: "error",
+          duration: 5000,
+          isClosable: true,
+          position: "bottom",
+        });
+      });
+  };
+
   useEffect(() => {
     socket.on("message received", (newMessageReceived) => {
       if (
         !selectedChatCompare ||
         selectedChatCompare._id !== newMessageReceived.chat._id
       ) {
-        if (!notification.includes(newMessageReceived)) {
+        if (
+          !notification.some(
+            (notification) => notification._id === newMessageReceived._id
+          )
+        ) {
           setNotification([newMessageReceived, ...notification]);
           setFetchAgain(!fetchAgain);
         }
       } else {
-        setMessages([...messages, newMessageReceived]);
+        setMessages((prevMessages) => [...prevMessages, newMessageReceived]);
       }
     });
-  });
+
+    return () => {
+      socket.off("message received");
+    };
+  }, [selectedChatCompare, notification, setNotification, setFetchAgain]);
 
   const fetchMessages = async () => {
     if (!selectedChat) return;
     try {
-      const config = {
-        headers: {
-          Authorization: `Bearer ${user.token}`,
-        },
-      };
       setLoading(true);
-      const { data } = await axios.get(
-        `/api/message/${selectedChat._id}`,
-        config
-      );
-
+      const { data } = await apiEndpoints.fetchMessages(selectedChat._id);
       setMessages(data?.data);
       setLoading(false);
-      socket.emit("join chat", selectedChat._id);
+      socket.emit("join chat", selectedChat, user);
     } catch (error) {
       setLoading(false);
       toast({
@@ -107,25 +157,17 @@ function SingleChat({ fetchAgain, setFetchAgain }) {
     if (event.key === "Enter" && newMessage) {
       socket.emit("stop typing", selectedChat._id);
       try {
-        const config = {
-          headers: {
-            "Content-type": "application/json",
-            Authorization: `Bearer ${user.token}`,
-          },
-        };
         setNewMessage("");
-        const { data } = await axios.post(
-          "/api/message",
-          {
-            content: newMessage,
-            chatId: selectedChat._id,
-          },
 
-          config
-        );
+        const { data } = await apiEndpoints.sendMessage({
+          content: newMessage,
+          chatId: selectedChat._id,
+        });
 
         socket.emit("new message", data.data);
         setMessages([...messages, data?.data]);
+
+        createNotification(data.data);
       } catch {
         toast({
           title: "Error Occurred",
@@ -158,6 +200,18 @@ function SingleChat({ fetchAgain, setFetchAgain }) {
     }, timerLength);
   };
 
+  useEffect(() => {
+    socket.on("active users", (users) => {
+      setActiveUsers(users);
+    });
+  }, []);
+
+  useEffect(() => {
+    if (selectedChat) {
+      readChatNotifications();
+    }
+  }, [selectedChat]);
+
   return (
     <>
       {selectedChat ? (
@@ -171,11 +225,15 @@ function SingleChat({ fetchAgain, setFetchAgain }) {
             display="flex"
             justifyContent={{ base: "space-between" }}
             alignItems="center"
+            color={colorMode === "light" ? "black" : "white"}
           >
             <IconButton
               display={{ base: "flex", md: "none" }}
               icon={<ArrowBackIcon />}
-              onClick={() => setSelectedChat("")}
+              onClick={() => {
+                socket.emit("leave chat", selectedChat, user);
+                setSelectedChat("");
+              }}
             />
             {!selectedChat.isGroupChat ? (
               <>
@@ -198,7 +256,7 @@ function SingleChat({ fetchAgain, setFetchAgain }) {
             flexDirection="column"
             justifyContent="flex-end"
             p={3}
-            bg="#E8E8E8"
+            bg={colorMode === "light" ? "#E8E8E8" : "gray.700"}
             w="100%"
             h="100%"
             borderRadius="lg"
@@ -220,11 +278,17 @@ function SingleChat({ fetchAgain, setFetchAgain }) {
             <FormControl onKeyDown={sendMessage} isRequired mt={3}>
               {isTyping ? (
                 <div>
-                  <Lottie
-                    options={defaultOptions}
-                    width={70}
-                    style={{ marginBottom: 15, marginLeft: 0 }}
-                  />
+                  <div
+                    style={{
+                      marginBottom: 15,
+                      marginLeft: 0,
+                      marginRight: 0,
+                      width: 70,
+                      display: "flex",
+                    }}
+                  >
+                    <Lottie options={defaultOptions} width={70} />
+                  </div>
                 </div>
               ) : (
                 <></>
@@ -233,7 +297,8 @@ function SingleChat({ fetchAgain, setFetchAgain }) {
                 placeholder="Enter a message"
                 onChange={typingHandler}
                 variant="filled"
-                bg="#E0E0E0"
+                bg={colorMode === "light" ? "#E0E0E0" : "gray.800"}
+                color={colorMode === "light" ? "black" : "white"}
                 value={newMessage}
               />
             </FormControl>
@@ -246,7 +311,11 @@ function SingleChat({ fetchAgain, setFetchAgain }) {
           justifyContent="space-between"
           h="100%"
         >
-          <Text fontSize="3xl" fontFamily="Work sans">
+          <Text
+            fontSize="3xl"
+            fontFamily="Work sans"
+            color={colorMode === "light" ? "black" : "white"}
+          >
             Click on a user to start chatting
           </Text>
         </Box>

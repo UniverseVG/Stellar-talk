@@ -18,32 +18,25 @@ import {
   // MenuList,
   Text,
   Tooltip,
+  useColorMode,
   useDisclosure,
   useToast,
 } from "@chakra-ui/react";
-import { useState } from "react";
-import { BellIcon, ChevronDownIcon } from "@chakra-ui/icons";
+import { useEffect, useState } from "react";
+import { BellIcon, ChevronDownIcon, MoonIcon, SunIcon } from "@chakra-ui/icons";
 import { ChatState } from "../Context/ChatProvider";
 import ProfileModal from "./User/ProfileModal";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
 import ChatLoading from "./ChatSection/ChatLoading";
 import UserListItem from "./User/UserListItem";
 import { getSender } from "../config/ChatLogic";
 import "./styles.css";
+import io from "socket.io-client";
+import apiEndpoints from "../api";
 
+const ENDPOINT = import.meta.env.VITE_SERVER_URL;
+var socket;
 function SideDrawer() {
-  const [search, setSearch] = useState("");
-  const [searchResult, setSearchResult] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [loadingChat, setLoadingChat] = useState(false);
-  const { isOpen, onOpen, onClose } = useDisclosure();
-  const navigate = useNavigate();
-  const logoutHandler = () => {
-    localStorage.removeItem("userInfo");
-    navigate("/");
-  };
-
   const {
     user,
     setSelectedChat,
@@ -52,6 +45,18 @@ function SideDrawer() {
     notification,
     setNotification,
   } = ChatState();
+  const [search, setSearch] = useState("");
+  const [searchResult, setSearchResult] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [loadingChat, setLoadingChat] = useState(false);
+  const { colorMode, toggleColorMode } = useColorMode();
+  const { isOpen, onOpen, onClose } = useDisclosure();
+  const navigate = useNavigate();
+  const logoutHandler = () => {
+    localStorage.removeItem("userInfo");
+    navigate("/");
+  };
+
   const toast = useToast();
 
   const handleSearch = async () => {
@@ -68,12 +73,7 @@ function SideDrawer() {
     try {
       setLoading(true);
 
-      const config = {
-        headers: {
-          Authorization: `Bearer ${user.token}`,
-        },
-      };
-      const { data } = await axios.get(`/api/user?search=${search}`, config);
+      const { data } = await apiEndpoints.searchUsers(search);
       setLoading(false);
       setSearchResult(data.data);
     } catch (error) {
@@ -92,13 +92,8 @@ function SideDrawer() {
   const accessChat = async (userId) => {
     try {
       setLoadingChat(true);
-      const config = {
-        headers: {
-          "Content-type": "application/json",
-          Authorization: `Bearer ${user.token}`,
-        },
-      };
-      const { data } = await axios.post(`/api/chat`, { userId }, config);
+
+      const { data } = await apiEndpoints.accessChat({ userId });
       if (!chats?.find((c) => c._id === data.data._id)) {
         setChats([data.data, ...chats]);
       }
@@ -118,19 +113,68 @@ function SideDrawer() {
     }
   };
 
+  const getNotifications = async () => {
+    try {
+      const { data } = await apiEndpoints.fetchNotifications();
+      setNotification(data.data);
+    } catch (error) {
+      toast({
+        title: "Error Occurred!",
+        description: error.message || "Failed to Load the Notifications",
+        status: "error",
+        duration: 5000,
+        isClosable: true,
+        position: "bottom-left",
+      });
+    }
+  };
+
+  const readNotification = async (id) => {
+    try {
+      await apiEndpoints.readNotification(id);
+    } catch (error) {
+      toast({
+        title: "Error Occurred!",
+        description: error.message || "Failed to read the Notifications",
+        status: "error",
+        duration: 5000,
+        isClosable: true,
+        position: "bottom-left",
+      });
+    }
+  };
+
+  useEffect(() => {
+    socket = io(ENDPOINT);
+  }, []);
+
+  useEffect(() => {
+    socket.on("notification", () => {
+      getNotifications();
+    });
+  }, []);
+
+  useEffect(() => {
+    getNotifications();
+  }, []);
+
   return (
     <>
       <Box
         display="flex"
         justifyContent="space-between"
         alignItems="center"
-        bg="white"
+        bg={colorMode === "light" ? "white" : "gray.800"}
         w="100%"
         p="5px 10px 5px 10px"
         borderWidth="5px"
       >
         <Tooltip label="Search Users to chat" hasArrow placement="bottom-end">
-          <Button value="ghost" onClick={onOpen}>
+          <Button
+            value="ghost"
+            onClick={onOpen}
+            size={{ base: "sm", md: "md" }}
+          >
             <i className="fas fa-search"></i>
             <Text display={{ base: "none", md: "flex" }} px={4}>
               Search Users
@@ -138,10 +182,21 @@ function SideDrawer() {
           </Button>
         </Tooltip>
 
-        <Text fontSize="2xl" fontFamily="Work sans">
+        <Text
+          fontSize={{ base: "md", md: "2xl" }}
+          fontFamily="Work sans"
+          style={{ color: colorMode === "light" ? "black" : "white" }}
+        >
           Stellar-Talk
         </Text>
         <div>
+          <Button onClick={toggleColorMode} size={{ base: "sm", md: "md" }}>
+            {colorMode === "light" ? (
+              <MoonIcon fontSize={{ base: "lg", md: "xl" }} />
+            ) : (
+              <SunIcon fontSize={{ base: "lg", md: "xl" }} />
+            )}
+          </Button>
           <Menu>
             <MenuButton p={1}>
               {notification.length > 0 && (
@@ -151,17 +206,23 @@ function SideDrawer() {
                   </span>
                 </div>
               )}
-              <BellIcon fontSize="2xl" m={1} />
+              <BellIcon
+                fontSize={{ base: "lg", md: "2xl" }}
+                m={1}
+                style={{ color: colorMode === "light" ? "black" : "white" }}
+              />
             </MenuButton>
-            <MenuList pl={2}>
+            <MenuList pl={2} color={colorMode === "light" ? "black" : "white"}>
               {!notification.length && "No New Messages"}
               {notification.map((notif) => (
                 <MenuItem
                   key={notif._id}
                   onClick={() => {
+                    readNotification(notif._id);
                     setSelectedChat(notif.chat);
                     setNotification(notification.filter((n) => n !== notif));
                   }}
+                  color={colorMode === "light" ? "black" : "white"}
                 >
                   {notif.chat.isGroupChat
                     ? `New Message in ${notif.chat.chatName}`
@@ -171,9 +232,13 @@ function SideDrawer() {
             </MenuList>
           </Menu>
           <Menu>
-            <MenuButton as={Button} rightIcon={<ChevronDownIcon />}>
+            <MenuButton
+              as={Button}
+              rightIcon={<ChevronDownIcon />}
+              size={{ base: "sm", md: "md" }}
+            >
               <Avatar
-                size="sm"
+                size={{ base: "sm" }}
                 cursor="pointer"
                 name={user.name}
                 src={user.pic}
@@ -181,11 +246,18 @@ function SideDrawer() {
             </MenuButton>
             <MenuList>
               <ProfileModal user={user}>
-                <MenuItem>My Profile</MenuItem>
+                <MenuItem color={colorMode === "light" ? "black" : "white"}>
+                  My Profile
+                </MenuItem>
               </ProfileModal>
 
               <MenuDivider />
-              <MenuItem onClick={logoutHandler}>Logout</MenuItem>
+              <MenuItem
+                onClick={logoutHandler}
+                color={colorMode === "light" ? "black" : "white"}
+              >
+                Logout
+              </MenuItem>
             </MenuList>
           </Menu>
         </div>

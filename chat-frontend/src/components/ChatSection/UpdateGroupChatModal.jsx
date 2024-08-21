@@ -18,12 +18,12 @@ import {
   Spinner,
   Text,
 } from "@chakra-ui/react";
-import axios from "axios";
 import { useState } from "react";
 import UserBadgeItem from "../User/UserBadgeItem";
 import UserListItem from "../User/UserListItem";
 import { ChatState } from "../../Context/ChatProvider";
 import { debounce } from "../../config/Debounce";
+import apiEndpoints from "../../api";
 
 const UpdateGroupChatModal = ({ fetchAgain, setFetchAgain, fetchMessages }) => {
   const { selectedChat, setSelectedChat, user } = ChatState();
@@ -44,12 +44,7 @@ const UpdateGroupChatModal = ({ fetchAgain, setFetchAgain, fetchMessages }) => {
 
     try {
       setLoading(true);
-      const config = {
-        headers: {
-          Authorization: `Bearer ${user.token}`,
-        },
-      };
-      const { data } = await axios.get(`/api/user?search=${search}`, config);
+      const { data } = await apiEndpoints.searchUsers(search);
       setLoading(false);
       setSearchResult(data?.data);
     } catch {
@@ -71,19 +66,11 @@ const UpdateGroupChatModal = ({ fetchAgain, setFetchAgain, fetchMessages }) => {
 
     try {
       setRenameLoading(true);
-      const config = {
-        headers: {
-          Authorization: `Bearer ${user.token}`,
-        },
-      };
-      const { data } = await axios.put(
-        `/api/chat/rename`,
-        {
-          chatId: selectedChat._id,
-          chatName: groupChatName,
-        },
-        config
-      );
+
+      const { data } = await apiEndpoints.renameGroup({
+        chatId: selectedChat._id,
+        chatName: groupChatName,
+      });
 
       // setSelectedChat("");
       setSelectedChat(data?.data);
@@ -136,19 +123,11 @@ const UpdateGroupChatModal = ({ fetchAgain, setFetchAgain, fetchMessages }) => {
 
     try {
       setLoading(true);
-      const config = {
-        headers: {
-          Authorization: `Bearer ${user.token}`,
-        },
-      };
-      const { data } = await axios.put(
-        `/api/chat/groupadd`,
-        {
-          chatId: selectedChat._id,
-          userId: user1._id,
-        },
-        config
-      );
+
+      const { data } = await apiEndpoints.addUserToGroup({
+        chatId: selectedChat._id,
+        userId: user1._id,
+      });
 
       setSelectedChat(data.data);
       setFetchAgain(!fetchAgain);
@@ -187,19 +166,11 @@ const UpdateGroupChatModal = ({ fetchAgain, setFetchAgain, fetchMessages }) => {
 
     try {
       setLoading(true);
-      const config = {
-        headers: {
-          Authorization: `Bearer ${user.token}`,
-        },
-      };
-      const { data } = await axios.put(
-        `/api/chat/groupremove`,
-        {
-          chatId: selectedChat._id,
-          userId: user1._id,
-        },
-        config
-      );
+
+      const { data } = await apiEndpoints.removeUserFromGroup({
+        chatId: selectedChat._id,
+        userId: user1._id,
+      });
 
       user1._id === user._id ? setSelectedChat() : setSelectedChat(data?.data);
       setFetchAgain(!fetchAgain);

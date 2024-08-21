@@ -9,15 +9,15 @@ import {
   VStack,
 } from "@chakra-ui/react";
 import { useState } from "react";
-import axios from "axios";
 import { useNavigate } from "react-router-dom";
+import apiEndpoints from "../../api";
 
 function SignUp() {
-  const [name, setName] = useState();
-  const [email, setEmail] = useState();
-  const [confirmPassword, setConfirmPassword] = useState();
-  const [password, setPassword] = useState();
-  const [pic, setPic] = useState();
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [password, setPassword] = useState("");
+  const [pic, setPic] = useState("");
   const [picLoading, setPicLoading] = useState(false);
   const [show, setShow] = useState(false);
 
@@ -113,22 +113,12 @@ function SignUp() {
     }
 
     try {
-      const config = {
-        headers: {
-          "Content-type": "application/json",
-        },
-      };
-
-      const { data } = await axios.post(
-        "/api/user",
-        {
-          name,
-          email,
-          password,
-          pic,
-        },
-        config
-      );
+      const { data } = await apiEndpoints.register({
+        name,
+        email,
+        password,
+        pic,
+      });
       toast({
         title: "Registration Successful",
         status: "success",

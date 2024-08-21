@@ -8,15 +8,15 @@ import {
   useToast,
   VStack,
 } from "@chakra-ui/react";
-import axios from "axios";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import apiEndpoints from "../../api";
 
 function Login() {
   const toast = useToast();
 
-  const [email, setEmail] = useState();
-  const [password, setPassword] = useState();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [show, setShow] = useState(false);
   const handleClick = () => setShow(!show);
@@ -37,17 +37,7 @@ function Login() {
     }
 
     try {
-      const config = {
-        headers: {
-          "Content-type": "application/json",
-        },
-      };
-
-      const { data } = await axios.post(
-        "/api/user/login",
-        { email, password },
-        config
-      );
+      const { data } = await apiEndpoints.login({ email, password });
 
       toast({
         title: "Login Successful",

@@ -15,12 +15,12 @@ import {
   Box,
   Spinner,
 } from "@chakra-ui/react";
-import axios from "axios";
-import { useCallback, useState } from "react";
+import { useState } from "react";
 import { ChatState } from "../../Context/ChatProvider";
 import UserListItem from "../User/UserListItem";
 import UserBadgeItem from "../User/UserBadgeItem";
 import { debounce } from "../../config/Debounce";
+import apiEndpoints from "../../api";
 
 const GroupChatModal = ({ children }) => {
   const { isOpen, onOpen, onClose } = useDisclosure();
@@ -31,7 +31,7 @@ const GroupChatModal = ({ children }) => {
   const [loading, setLoading] = useState(false);
   const toast = useToast();
 
-  const { user, chats, setChats } = ChatState();
+  const {  chats, setChats } = ChatState();
 
   const handleGroup = (userToAdd) => {
     if (selectedUsers.includes(userToAdd)) {
@@ -56,12 +56,7 @@ const GroupChatModal = ({ children }) => {
 
     try {
       setLoading(true);
-      const config = {
-        headers: {
-          Authorization: `Bearer ${user.token}`,
-        },
-      };
-      const { data } = await axios.get(`/api/user?search=${query}`, config);
+      const { data } = await apiEndpoints.searchUsers(search);
       setLoading(false);
       setSearchResult(data?.data);
     } catch {
@@ -95,19 +90,10 @@ const GroupChatModal = ({ children }) => {
     }
 
     try {
-      const config = {
-        headers: {
-          Authorization: `Bearer ${user.token}`,
-        },
-      };
-      const { data } = await axios.post(
-        `/api/chat/group`,
-        {
-          name: groupChatName,
-          users: JSON.stringify(selectedUsers.map((u) => u._id)),
-        },
-        config
-      );
+      const { data } = await apiEndpoints.createGroup({
+        name: groupChatName,
+        users: JSON.stringify(selectedUsers.map((u) => u._id)),
+      });
       setChats([data?.data, ...chats]);
       onClose();
       toast({
