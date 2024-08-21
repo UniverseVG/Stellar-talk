@@ -31,7 +31,7 @@ const GroupChatModal = ({ children }) => {
   const [loading, setLoading] = useState(false);
   const toast = useToast();
 
-  const {  chats, setChats } = ChatState();
+  const { chats, setChats } = ChatState();
 
   const handleGroup = (userToAdd) => {
     if (selectedUsers.includes(userToAdd)) {
@@ -123,7 +123,7 @@ const GroupChatModal = ({ children }) => {
         <ModalOverlay />
         <ModalContent>
           <ModalHeader
-            fontSize="35px"
+            fontSize={{ base: "17px", md: "20px", lg: "24px" }}
             fontFamily="Work sans"
             d="flex"
             justifyContent="center"

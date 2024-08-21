@@ -21,6 +21,8 @@ import io from "socket.io-client";
 import Lottie from "react-lottie";
 import typingAnimation from "../../animations/typing_json.json";
 import apiEndpoints from "../../api";
+import bgDark from "../../assets/chat_background.jpg";
+import bgLight from "../../assets/light_chat.jpg";
 
 const ENDPOINT = import.meta.env.VITE_SERVER_URL;
 var socket, selectedChatCompare;
@@ -256,11 +258,13 @@ function SingleChat({ fetchAgain, setFetchAgain }) {
             flexDirection="column"
             justifyContent="flex-end"
             p={3}
-            bg={colorMode === "light" ? "#E8E8E8" : "gray.700"}
             w="100%"
             h="100%"
             borderRadius="lg"
             overflowY="hidden"
+            bgImage={`url(${colorMode === "light" ? bgLight : bgDark})`}
+            bgSize="cover"
+            bgPosition="center"
           >
             {loading ? (
               <Spinner
@@ -307,13 +311,20 @@ function SingleChat({ fetchAgain, setFetchAgain }) {
       ) : (
         <Box
           display="flex"
-          alignItems="center"
-          justifyContent="space-between"
+          alignItems="top"
+          justifyContent="center"
+          p={3}
+          borderRadius="lg"
           h="100%"
+          w="100%"
+          bgImage={`url(${colorMode === "light" ? bgLight : bgDark})`}
+          bgSize="cover"
+          bgPosition="center"
         >
           <Text
             fontSize="3xl"
             fontFamily="Work sans"
+            fontWeight="bold"
             color={colorMode === "light" ? "black" : "white"}
           >
             Click on a user to start chatting

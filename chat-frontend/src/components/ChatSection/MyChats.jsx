@@ -110,7 +110,7 @@ function MyChats({ fetchAgain }) {
                   selectedChat === chat
                     ? "#38B2AC"
                     : colorMode === "light"
-                    ? "#F5F5F5"
+                    ? "#E8E8E8"
                     : "gray.800"
                 }
                 color={selectedChat === chat ? "white" : "black"}

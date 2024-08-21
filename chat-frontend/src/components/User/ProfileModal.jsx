@@ -32,7 +32,7 @@ function ProfileModal({ user, children }) {
         <ModalOverlay />
         <ModalContent h="410px">
           <ModalHeader
-            fontSize="40px"
+            fontSize={{ base: "28px", md: "40px" }}
             fontFamily="Work sans"
             display="flex"
             justifyContent="center"

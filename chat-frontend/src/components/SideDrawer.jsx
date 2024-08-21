@@ -166,8 +166,9 @@ function SideDrawer() {
         alignItems="center"
         bg={colorMode === "light" ? "white" : "gray.800"}
         w="100%"
-        p="5px 10px 5px 10px"
-        borderWidth="5px"
+        p="8px"
+        borderRadius="lg"
+        borderWidth="1px"
       >
         <Tooltip label="Search Users to chat" hasArrow placement="bottom-end">
           <Button
@@ -238,7 +239,7 @@ function SideDrawer() {
               size={{ base: "sm", md: "md" }}
             >
               <Avatar
-                size={{ base: "sm" }}
+                size={{ base: "xs", md: "sm" }}
                 cursor="pointer"
                 name={user.name}
                 src={user.pic}

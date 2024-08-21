@@ -11,7 +11,10 @@ function ChatPage() {
 
   return (
     <div style={{ width: "100%" }}>
-      {user && <SideDrawer />}
+      <div style={{ width: "100%", padding: "8px" }}>
+        {user && <SideDrawer />}
+      </div>
+
       <Box
         display="flex"
         justifyContent="space-between"
